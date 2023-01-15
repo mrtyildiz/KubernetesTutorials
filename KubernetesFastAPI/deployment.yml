@@ -1,21 +1,20 @@
 apiVersion: apps/v1 
- kind: Deployment 
- metadata: 
-   name: fastapi-service
- spec: 
-   replicas: 2 
-   selector: 
-     matchLabels: 
-       app: fastapi-service
-   template: 
-     metadata: 
-       labels: 
-         app: fastapi-service  
-     spec: 
-       containers: 
-         - name: fastapi-service
-           image: fastapi-service
-           imagePullPolicy: Never 
-           ports: 
-             - containerPort: 5000 
-               protocol: TCP
+kind: Deployment 
+metadata: 
+  name: fastapi-service 
+spec: 
+  replicas: 2 
+  selector: 
+    matchLabels: 
+      app: fastapi-service 
+  template: 
+    metadata: 
+      labels: 
+        app: fastapi-service   
+    spec: 
+      containers: 
+        - name: fastapi-service 
+          image: muratyildiz66/fastapi:latest
+          ports: 
+            - containerPort: 8000 
+              protocol: TCP
