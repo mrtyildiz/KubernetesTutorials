@@ -433,3 +433,237 @@ spec:
 
 Kesinlikle bak network için;
 https://github.com/ahmetb/kubernetes-network-policy-recipes
+
+
+#### ingress nedir, nginx ingress configurasyonu
+
+Örneği aşağıdaki gibidir;
+
+- minikube start
+- minikube addons list
+- minikube addons enable ingress
+- kubectl get ns
+- kubectl get all -n ingress-nginx
+- kubectl run web1 --image=nginx
+- kubectl run web2 --image=httpd
+- kubectl get pods
+- kubectl expose pod web1 --port=80
+- kubectl expose pod web2 --port=80
+- kubectl get svc
+
+- kubectl apply -f example-ingress.yaml
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - host: devopsdude.info
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web1
+            port:
+              number: 80
+      - path: /login
+        pathType: Prefix
+        backend:
+          service:
+            name: web2
+            port:
+              number: 80
+------
+
+- kubectl get ingress
+- sudo nano /etc/hosts
+- minikube ip 
+- kubectl get nodes -o wide
+- kubectl get svc -n ingress-nginx
+- kubectl get ingress
+- kubectl describe ingress web
+
+###  NodeName, NodeSelector, Static-Pod
+
+- cat kind.yaml
+''''
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpho4
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6443
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+'''''''''''''''''''''
+
+- kind create cluster --name cka --config kind.yaml
+- kubectl cluster-info --context kind-cka
+- kubectl get nodes
+- kubectl run simple --image=nginx --dry-run=client -o yaml
+- kubectl run simple --image=nginx --dry-run=client -o yaml > simple.yaml
+- cat simple.yaml
+
+''''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodename-pod
+  name: nodename-pod
+spec:
+  containers:
+  - image: nginx
+    name: simple
+  nodeName: cka-worker
+''''
+
+- kubectl apply -f simple.yaml
+- kubectl get pods -o wide
+
+- cat simple.yaml
+
+''''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodename-pod-2
+  name: nodename-pod-2
+spec:
+  containers:
+  - image: nginx
+    name: simple
+  nodeName: cka-worker
+''''
+
+- kubectl apply -f simple.yaml
+- kubectl get pods -o wide
+
+### static pods
+- kubectl get pods -n kube-system
+- docker ps
+- docker exec -it cka-control-plane /bin/bash
+- ls /etc/kubernetes/manifests/
+- docker cp static-pod.yaml cka-worker2:/etc/kubernetes/manifests/
+'''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-pod
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+'''
+- kubectl get pods -o wide
+
+
+### NodeSelector
+
+- kubectl get nodes --show-labels
+- nano simple.yaml
+''''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodeselector-pod
+  name: nodeselector-pod
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+  nodeSelector:
+    node: highcpu
+''''
+- kubectl get nodes
+- kubectl get pods
+- kubectl get pods -o wide
+- kubectl label node cka-worker2 node=highcpu
+- kubectl get nodes --show-labels
+- kubectl apply -f simple.yaml
+- kubectl get pods -o wide
+/// Edit
+simple.yaml
+''''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodeselector-pod-2
+  name: nodeselector-pod-2
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+  nodeSelector:
+    node: highcpu
+''''
+- kubectl apply -f simple.yaml
+- kubectl get -o wide
+/// Edit
+simple.yaml
+''''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodeselector-pod-3
+  name: nodeselector-pod-3
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+  nodeSelector:
+    node: backend
+''''
+- kubectl apply -f simple.yaml
+- kubectl get pods -o wide
+- kubectl describe pod nodeselector-pod-3 // pending durumunda olacak bu durumun nedeni öğren
+- kubectl get pods -o wide
+- kubectl label node cka-worker app=backend
+- kubectl get pods -o wide
+
+
+#### RBAC nedir, Role Based Access Control ile kubernetes auth
+
+- kubectl get nodes
+- kubectl create ns web
+- kubectl get sa
+- kubectl get sa -n web
+- kubectl run web --image=nginx
+- kubectl get pods
+- kubectl describe sa web
+- kubectl exec -it web -- bash
+- ls /var/run/secrets/kubernetes.io/serviceaccount
+- cat /var/run/secrets/kubernetes.io/serviceaccoun/token
+- exit
+
+- kubectl create sa get-sa -n web
+- nano get-role.yaml
+''''
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: web
+  name: get-role
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods", "services"]
+  verbs: ["get"]
+''''
+- kubectl create -f get-role.yaml
+- kubectl get role -n web
+- kubectl create rolebinding get-binding --clusterrole=get-role --serviceaccount=web:get-sa --namespace=web
+- kubectl get sa,roleirolebinding -n web
+- kubectl auth can-i delete deployment --namespace web --as system:serviceaccount:web:get-sa
+- kubectl auth can-i create pvc --namespace web --as system:serviceaccount:web:get-sa
+- kubectl auth can-i get pods --namespace web --as system:serviceaccount:web:get-sa
+- kubectl auth can-i get services --namespace web --as system:serviceaccount:web:get-sa
